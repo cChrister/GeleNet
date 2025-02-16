@@ -17,9 +17,9 @@ opt = parser.parse_args()
 dataset_path = './data/'
 # you need to change 1 name of dataset line27 ;2 path of trained model line20;3 path of save result line31
 model = GeleNet()
-# model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
+model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
 # model.load_state_dict(torch.load('./models/GeleNet/GeleNet.pth.44'))
-model.load_state_dict(torch.load('./models/GeleNet/GeleNet_vgg.pth.44'))
+# model.load_state_dict(torch.load('./models/GeleNet/GeleNet_vgg.pth.44'))
 
 model.cuda()
 model.eval()
@@ -29,7 +29,8 @@ test_datasets = ['EORSSD']
 
 for dataset in test_datasets:
     # save_path = './models/GeleNet/' + dataset + '/'
-    save_path = './models/GeleNet/VGG/'
+    # save_path = './models/GeleNet/VGG_PVT/'
+    save_path = './models/GeleNet/EORSSD_papaer/'
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     image_root = dataset_path + dataset + '/test-images/'

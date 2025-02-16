@@ -248,17 +248,16 @@ class VGGNetFeatureExtractor(nn.Module):
 
     def forward(self, x):
         x1 = self.vgg[0:10](x)  # 128x88x88
-        x2 = self.vgg[10:17](x1)  # 256x44x44
-        x3 = self.vgg[17:24](x2)  # 512x22x22
+        x3 = self.vgg[10:24](x1)  # 512x22x22
         x4 = self.vgg[24:](x3)  # 512x11x11
-        return x1, x2, x3, x4
+        return x1, x3, x4
 
 class GeleNet(nn.Module):
     def __init__(self, channel=32):
         super(GeleNet, self).__init__()
 
         # # VGGNetFeatureExtractor
-        # self.vgg = VGGNetFeatureExtractor()
+        self.vgg = VGGNetFeatureExtractor()
 
         # PVT backbone
         self.backbone = pvt_v2_b2()  # [64, 128, 320, 512]
@@ -270,10 +269,12 @@ class GeleNet(nn.Module):
         self.backbone.load_state_dict(model_dict)
 
         # input 3x352x352
-        self.ChannelNormalization_1 = BasicConv2d(128, channel, 3, 1, 1)  # 64x88x88->32x88x88
-        self.ChannelNormalization_2 = BasicConv2d(256, channel, 3, 2, 1) # 128x44x44->32x22x22
-        self.ChannelNormalization_3 = BasicConv2d(512, channel, 3, 1, 1) # 320x22x22->32x22x22
-        self.ChannelNormalization_4 = BasicConv2d(512, channel, 3, 1, 1) # 512x11x11->32x11x11
+        self.ChannelNormalization_v1 = BasicConv2d(128, channel, 3, 1, 1)  # 64x88x88->32x88x88
+        self.ChannelNormalization_v3 = BasicConv2d(512, channel, 3, 1, 1) # 320x22x22->32x22x22
+        self.ChannelNormalization_v4 = BasicConv2d(512, channel, 3, 1, 1) # 512x11x11->32x11x11
+        self.ChannelNormalization_t1 = BasicConv2d(64, channel, 3, 1, 1)  # 64x88x88->32x88x88
+        self.ChannelNormalization_t3 = BasicConv2d(320, channel, 3, 1, 1) # 320x22x22->32x22x22
+        self.ChannelNormalization_t4 = BasicConv2d(512, channel, 3, 1, 1) # 512x11x11->32x11x11
 
         # SWSAM for x4_nor
         self.SWSAM_4 = SWSAM(channel)  # group x branch = channel
@@ -292,33 +293,33 @@ class GeleNet(nn.Module):
 
 
     def forward(self, x):
+        # x.size [1,3,352,352]
         # VGGNetFeatureExtractor
-        # x1, x2, x3, x4 = self.vgg(x)  # 128x88x88, 256x44x44, 512x22x22, 512x11x11
-
+        v1, v3, v4 = self.vgg(x)  # 128x88x88, 256x44x44, 512x22x22, 512x11x11
         # PVT backbone
-        pvt = self.backbone(x)#x.size [1,3,352,352]
-        x1 = pvt[0] # 1x64x88x88
-        x2 = pvt[1] # 1x128x44x44
-        x3 = pvt[2] # 1x320x22x22
-        x4 = pvt[3] # 1x512x11x11
+        t1, t3, t4 = self.backbone(x) # 64x88x88, 128x44x44, 320x22x22, 512x11x11
 
-        x1_nor = self.ChannelNormalization_1(x1) # 32x88x88
-        x2_nor = self.ChannelNormalization_2(x2) # 32x22x22
-        x3_nor = self.ChannelNormalization_3(x3) # 32x22x22
-        x4_nor = self.ChannelNormalization_4(x4) # 32x11x11
+        # v1_nor = self.ChannelNormalization_v1(v1) # 32x88x88
+        v3_nor = self.ChannelNormalization_v3(v3) # 32x22x22
+        v4_nor = self.ChannelNormalization_v4(v4) # 32x11x11
+        t1_nor = self.ChannelNormalization_t1(t1) # 32x88x88
+        t3_nor = self.ChannelNormalization_t3(t3) # 32x22x22
+        # t4_nor = self.ChannelNormalization_t4(t4) # 32x11x11
 
-        # SWSAM for x4_nor
-        x4_SWSAM_4 = self.SWSAM_4(x4_nor)  # 32x11x11
-
-        # D-SWSAM for x1_nor
-        x1_ori = self.dirConv(x1_nor)
-        x1_DSWSAM_1 = self.DSWSAM_1(x1_ori) # 32x88x88
+        # # SWSAM for x4_nor
+        # x4_SWSAM_4 = self.SWSAM_4(x4_nor)  # 32x11x11
+        # # D-SWSAM for x1_nor
+        # x1_ori = self.dirConv(x1_nor)
+        # x1_DSWSAM_1 = self.DSWSAM_1(x1_ori) # 32x88x88
 
         # KTM for x2_nor and x3_nor
-        x23_KTM = self.KTM_23(x2_nor, x3_nor) # 32x22x22
+        # vt1_KTM = self.KTM_23(v1_nor, t1_nor) # 32x88x88
+        # vt2_KTM = self.KTM_23(v2_nor, t2_nor)
+        vt3_KTM = self.KTM_23(v3_nor, t3_nor) # 32x22x22
+        # vt4_KTM = self.KTM_23(v4_nor, t4_nor) # 32x11x11
 
 
-        prediction = self.upsample_4(self.PDecoder(x4_SWSAM_4, x23_KTM, x1_DSWSAM_1))
+        prediction = self.upsample_4(self.PDecoder(v4_nor, vt3_KTM, t1_nor))
 
 
         return prediction, self.sigmoid(prediction)
