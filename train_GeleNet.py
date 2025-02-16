@@ -33,8 +33,8 @@ optimizer = torch.optim.Adam(params, opt.lr)
 #
 # image_root = './dataset/train_dataset/ORSSD/train/image/'
 # gt_root = './dataset/train_dataset/ORSSD/train/GT/'
-image_root = './dataset/train_dataset/EORSSD/train/image/'
-gt_root = './dataset/train_dataset/EORSSD/train/GT/'
+image_root = './data/EORSSD/train-images/'
+gt_root = './data/EORSSD/train-labels/'
 train_loader = get_loader(image_root, gt_root, batchsize=opt.batchsize, trainsize=opt.trainsize)
 total_step = len(train_loader)
 
