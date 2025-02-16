@@ -15,10 +15,11 @@ parser.add_argument('--testsize', type=int, default=352, help='testing size')
 opt = parser.parse_args()
 
 dataset_path = './data/'
-
+# you need to change 1 name of dataset line27 ;2 path of trained model line20;3 path of save result line31
 model = GeleNet()
 # model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
-model.load_state_dict(torch.load('./models/GeleNet/GeleNet.pth.44'))
+# model.load_state_dict(torch.load('./models/GeleNet/GeleNet.pth.44'))
+model.load_state_dict(torch.load('./models/GeleNet/GeleNet_vgg.pth.44'))
 
 model.cuda()
 model.eval()
@@ -28,7 +29,7 @@ test_datasets = ['EORSSD']
 
 for dataset in test_datasets:
     # save_path = './models/GeleNet/' + dataset + '/'
-    save_path = './models/GeleNet/EORSSD1/'
+    save_path = './models/GeleNet/VGG/'
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     image_root = dataset_path + dataset + '/test-images/'
@@ -36,6 +37,8 @@ for dataset in test_datasets:
     gt_root = dataset_path + dataset + '/test-labels/'
     test_loader = test_dataset(image_root, gt_root, opt.testsize)
     time_sum = 0
+    mse=0
+    mae=0
     for i in range(test_loader.size):
         image, gt, name = test_loader.load_data()
         gt = np.asarray(gt, np.float32)
@@ -53,3 +56,5 @@ for dataset in test_datasets:
             print('Running time {:.5f}'.format(time_sum/test_loader.size))
             print('FPS {:.5f}'.format(test_loader.size / time_sum))
 
+        mae += np.mean(np.abs(res/255 - gt))
+    print('mae:',mae/test_loader.size)

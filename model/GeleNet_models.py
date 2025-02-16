@@ -239,10 +239,28 @@ class PDecoder(nn.Module):
         return x
 
 
+from torchvision import models
+class VGGNetFeatureExtractor(nn.Module):
+    def __init__(self):
+        super(VGGNetFeatureExtractor, self).__init__()
+        self.vgg = models.vgg16(pretrained=True).features
+        self.vgg.eval()  # Set the model to evaluation mode
+
+    def forward(self, x):
+        x1 = self.vgg[0:10](x)  # 128x88x88
+        x2 = self.vgg[10:17](x1)  # 256x44x44
+        x3 = self.vgg[17:24](x2)  # 512x22x22
+        x4 = self.vgg[24:](x3)  # 512x11x11
+        return x1, x2, x3, x4
+
 class GeleNet(nn.Module):
     def __init__(self, channel=32):
         super(GeleNet, self).__init__()
 
+        # # VGGNetFeatureExtractor
+        # self.vgg = VGGNetFeatureExtractor()
+
+        # PVT backbone
         self.backbone = pvt_v2_b2()  # [64, 128, 320, 512]
         path = './model/pvt_v2_b2.pth'
         save_model = torch.load(path)
@@ -252,9 +270,9 @@ class GeleNet(nn.Module):
         self.backbone.load_state_dict(model_dict)
 
         # input 3x352x352
-        self.ChannelNormalization_1 = BasicConv2d(64, channel, 3, 1, 1)  # 64x88x88->32x88x88
-        self.ChannelNormalization_2 = BasicConv2d(128, channel, 3, 2, 1) # 128x44x44->32x22x22
-        self.ChannelNormalization_3 = BasicConv2d(320, channel, 3, 1, 1) # 320x22x22->32x22x22
+        self.ChannelNormalization_1 = BasicConv2d(128, channel, 3, 1, 1)  # 64x88x88->32x88x88
+        self.ChannelNormalization_2 = BasicConv2d(256, channel, 3, 2, 1) # 128x44x44->32x22x22
+        self.ChannelNormalization_3 = BasicConv2d(512, channel, 3, 1, 1) # 320x22x22->32x22x22
         self.ChannelNormalization_4 = BasicConv2d(512, channel, 3, 1, 1) # 512x11x11->32x11x11
 
         # SWSAM for x4_nor
@@ -274,13 +292,15 @@ class GeleNet(nn.Module):
 
 
     def forward(self, x):
+        # VGGNetFeatureExtractor
+        # x1, x2, x3, x4 = self.vgg(x)  # 128x88x88, 256x44x44, 512x22x22, 512x11x11
 
-        # backbone
-        pvt = self.backbone(x)
-        x1 = pvt[0] # 64x88x88
-        x2 = pvt[1] # 128x44x44
-        x3 = pvt[2] # 320x22x22
-        x4 = pvt[3] # 512x11x11
+        # PVT backbone
+        pvt = self.backbone(x)#x.size [1,3,352,352]
+        x1 = pvt[0] # 1x64x88x88
+        x2 = pvt[1] # 1x128x44x44
+        x3 = pvt[2] # 1x320x22x22
+        x4 = pvt[3] # 1x512x11x11
 
         x1_nor = self.ChannelNormalization_1(x1) # 32x88x88
         x2_nor = self.ChannelNormalization_2(x2) # 32x22x22
