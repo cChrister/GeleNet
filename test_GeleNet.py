@@ -17,8 +17,9 @@ opt = parser.parse_args()
 dataset_path = './data/'
 # you need to change 1 name of dataset line27 ;2 path of trained model line20;3 path of save result line31
 model = GeleNet()
-model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
-# model.load_state_dict(torch.load('./models/GeleNet/GeleNet.pth.44'))
+save_path = './models/0/'
+# model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
+model.load_state_dict(torch.load('./models/01.pth'))
 # model.load_state_dict(torch.load('./models/GeleNet/GeleNet_vgg.pth.44'))
 
 model.cuda()
@@ -28,9 +29,9 @@ test_datasets = ['EORSSD']
 #test_datasets = ['EORSSD','ORSSD','ors-4199']
 
 for dataset in test_datasets:
+    # 循环是为了同时测试多个数据集，暂时没用到这个功能，先不做处理
     # save_path = './models/GeleNet/' + dataset + '/'
     # save_path = './models/GeleNet/VGG_PVT/'
-    save_path = './models/GeleNet/EORSSD_papaer/'
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     image_root = dataset_path + dataset + '/test-images/'
@@ -51,11 +52,12 @@ for dataset in test_datasets:
         time_sum = time_sum+(time_end-time_start)
         res = F.upsample(res, size=gt.shape, mode='bilinear', align_corners=False)
         res = res.sigmoid().data.cpu().numpy().squeeze()
-        res = (res - res.min()) / (res.max() - res.min() + 1e-8)*255
-        imageio.imsave(save_path+name, res.astype('uint8'))
+        res = (res - res.min()) / (res.max() - res.min() + 1e-8)
+        res_save = res*255
+        imageio.imsave(save_path+name, res_save.astype('uint8'))
         if i == test_loader.size-1:
             print('Running time {:.5f}'.format(time_sum/test_loader.size))
             print('FPS {:.5f}'.format(test_loader.size / time_sum))
 
-        mae += np.mean(np.abs(res/255 - gt))
+        mae += np.mean(np.abs(res - gt))
     print('mae:',mae/test_loader.size)
