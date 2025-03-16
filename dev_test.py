@@ -7,7 +7,7 @@ from scipy import misc
 import imageio
 import time
 
-from model.GeleNet_models import GeleNet
+from model.dev import GeleNet
 from data import test_dataset
 
 parser = argparse.ArgumentParser()

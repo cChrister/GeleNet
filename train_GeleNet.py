@@ -21,17 +21,17 @@ import imageio
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=60, help='epoch number')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
-parser.add_argument('--batchsize', type=int, default=10, help='training batch size')
+parser.add_argument('--batchsize', type=int, default=6, help='training batch size')
 parser.add_argument('--trainsize', type=int, default=352, help='training dataset size')
 parser.add_argument('--clip', type=float, default=0.5, help='gradient clipping margin')
 parser.add_argument('--decay_rate', type=float, default=0.1, help='decay rate of learning rate')
-parser.add_argument('--decay_epoch', type=int, default=30, help='every n epochs decay learning rate')
+parser.add_argument('--decay_epoch', type=int, default=40, help='every n epochs decay learning rate')
 opt = parser.parse_args()
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # build models
-model = GeleNet().to(device)
+model = GeleNet(channel=16).to(device)
 
 
 params = model.parameters()
@@ -42,7 +42,7 @@ image_root = './data/EORSSD/train-images/'
 gt_root = './data/EORSSD/train-labels/'
 image_root_test = './data/EORSSD/test-images/'
 gt_root_test = './data/EORSSD/test-labels/'
-model_save_path = './models/04.pth'
+model_save_path = './models/101.pth'
 
 train_loader = get_loader(image_root, gt_root, batchsize=opt.batchsize, trainsize=opt.trainsize)
 total_step = len(train_loader)
