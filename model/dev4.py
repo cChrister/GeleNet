@@ -238,13 +238,50 @@ class PDecoder(nn.Module):
 
         return x
 
+class decoder(nn.Module):
+    # dense aggregation, it can be replaced by other aggregation model, such as DSS, amulet, and so on.
+    # used after MSF
+    def __init__(self, channel):
+        super(decoder, self).__init__()
+        self.relu = nn.ReLU(True)
+
+        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.conv_upsample1 = BasicConv2d(channel, channel, 3, padding=1)
+        self.conv_upsample2 = BasicConv2d(channel, channel, 3, padding=1)
+        self.conv_upsample3 = BasicConv2d(channel, channel, 3, padding=1)
+        self.conv_upsample4 = BasicConv2d(channel, channel, 3, padding=1)
+        self.conv_upsample5 = BasicConv2d(2*channel, 2*channel, 3, padding=1)
+
+        self.conv_concat2 = BasicConv2d(2*channel, 2*channel, 3, padding=1)
+        self.conv_concat3 = BasicConv2d(3*channel, 3*channel, 3, padding=1)
+        self.conv4 = BasicConv2d(3*channel, 3*channel, 3, padding=1)
+        self.conv5 = nn.Conv2d(3*channel, 1, 1)
+
+    def forward(self, x1, x2, x3):
+        x1_1 = x1
+        x2_1 = self.conv_upsample1(self.upsample(x1)) * x2
+        x3_1 = self.conv_upsample2(self.upsample(self.upsample(x1))) \
+               * self.conv_upsample3(self.upsample(x2)) * x3
+
+        x2_2 = torch.cat((x2_1, self.conv_upsample4(self.upsample(x1_1))), 1)
+        x2_2 = self.conv_concat2(x2_2)
+
+        x3_2 = torch.cat((x3_1, self.conv_upsample5(self.upsample(x2_2))), 1)
+        x3_2 = self.conv_concat3(x3_2)
+
+        x = self.conv4(x3_2)
+        # N,96,H//8,W//8
+        x = self.conv5(x)
+
+        return x
+
 
 from torchvision import models
 class VGGNetFeatureExtractor(nn.Module):
     def __init__(self):
         super(VGGNetFeatureExtractor, self).__init__()
         self.vgg = models.vgg16(pretrained=True).features
-        self.vgg.eval()  # Set the model to evaluation mode
+        # self.vgg.eval()  # Set the model to evaluation mode
 
     def forward(self, x):
         x1 = self.vgg[0:10](x)  # 128x88x88
@@ -279,11 +316,11 @@ class GeleNet(nn.Module):
 
         # input 3x352x352
         self.ChannelNormalization_v1 = BasicConv2d(256, channel, 3, 1, 1)  # 64x88x88->32x88x88
-        self.ChannelNormalization_v3 = BasicConv2d(1024, channel, 3, 1, 1) # 320x22x22->32x22x22
-        self.ChannelNormalization_v4 = BasicConv2d(2048, channel, 3, 1, 1) # 512x11x11->32x11x11
+        self.ChannelNormalization_v3 = BasicConv2d(512, channel, 3, 1, 1) # 320x22x22->32x22x22
+        self.ChannelNormalization_v4 = BasicConv2d(1024, channel, 3, 1, 1) # 512x11x11->32x11x11
         self.ChannelNormalization_t1 = BasicConv2d(128, channel, 3, 1, 1)  # 64x88x88->32x88x88
-        self.ChannelNormalization_t3 = BasicConv2d(512, channel, 3, 1, 1) # 320x22x22->32x22x22
-        self.ChannelNormalization_t4 = BasicConv2d(1024, channel, 3, 1, 1) # 512x11x11->32x11x11
+        self.ChannelNormalization_t3 = BasicConv2d(256, channel, 3, 1, 1) # 320x22x22->32x22x22
+        self.ChannelNormalization_t4 = BasicConv2d(512, channel, 3, 1, 1) # 512x11x11->32x11x11
 
         # SWSAM for x4_nor
         # self.SWSAM_4 = SWSAM(channel)  # group x branch = channel
@@ -297,7 +334,7 @@ class GeleNet(nn.Module):
         self.KTM2 = KTM(channel)
         self.KTM3 = KTM(channel)
 
-        self.PDecoder = PDecoder(channel)
+        self.PDecoder = decoder(channel)
         self.upsample_4 = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -347,11 +384,11 @@ class GeleNet(nn.Module):
         x_u4 = self.drop(x_u4) # 2048*12*12
 
         v1_nor = self.ChannelNormalization_v1(x_u1) # 32x88x88
-        v3_nor = self.ChannelNormalization_v3(x_u3) # 32x22x22
-        v4_nor = self.ChannelNormalization_v4(x_u4) # 32x11x11
+        v3_nor = self.ChannelNormalization_v3(x_u2) # 32x22x22
+        v4_nor = self.ChannelNormalization_v4(x_u3) # 32x11x11
         t1_nor = self.ChannelNormalization_t1(score_T_1) # 32x88x88
-        t3_nor = self.ChannelNormalization_t3(score_T_3) # 32x22x22
-        t4_nor = self.ChannelNormalization_t4(score_T_4) # 32x11x11
+        t3_nor = self.ChannelNormalization_t3(score_T_2) # 32x22x22
+        t4_nor = self.ChannelNormalization_t4(score_T_3) # 32x11x11
 
         # # SWSAM for x4_nor
         # v4_SWSAM_4 = self.SWSAM_4(v4_nor)  # 32x11x11
