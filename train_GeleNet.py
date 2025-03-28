@@ -7,7 +7,7 @@ import numpy as np
 import pdb, os, argparse
 from datetime import datetime
 
-from model.GeleNet_models import GeleNet
+from model.dev2 import GeleNet
 from data import get_loader
 from utils import clip_gradient, adjust_lr
 
@@ -25,14 +25,17 @@ parser.add_argument('--batchsize', type=int, default=6, help='training batch siz
 parser.add_argument('--trainsize', type=int, default=352, help='training dataset size')
 parser.add_argument('--clip', type=float, default=0.5, help='gradient clipping margin')
 parser.add_argument('--decay_rate', type=float, default=0.1, help='decay rate of learning rate')
-parser.add_argument('--decay_epoch', type=int, default=40, help='every n epochs decay learning rate')
+parser.add_argument('--decay_epoch', type=int, default=30, help='every n epochs decay learning rate')
 opt = parser.parse_args()
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # build models
 model = GeleNet(channel=16).to(device)
-
+def count_parameters(model):
+    para =  sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(para) # 统计当前模型的参数量
+count_parameters(model)
 
 params = model.parameters()
 optimizer = torch.optim.Adam(params, opt.lr)
@@ -42,7 +45,7 @@ image_root = './data/EORSSD/train-images/'
 gt_root = './data/EORSSD/train-labels/'
 image_root_test = './data/EORSSD/test-images/'
 gt_root_test = './data/EORSSD/test-labels/'
-model_save_path = './models/101.pth'
+model_save_path = './models/106.pth'
 
 train_loader = get_loader(image_root, gt_root, batchsize=opt.batchsize, trainsize=opt.trainsize)
 total_step = len(train_loader)

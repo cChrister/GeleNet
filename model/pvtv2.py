@@ -356,7 +356,7 @@ class PyramidVisionTransformerImpr(nn.Module):
         x = self.forward_features(x)
         # x = self.head(x)
 
-        return x[0],x[2],x[3]
+        return x[0],x[1],x[2],x[3]
 
 
 class DWConv(nn.Module):
