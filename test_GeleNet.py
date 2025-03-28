@@ -7,19 +7,19 @@ from scipy import misc
 import imageio
 import time
 
-from model.GeleNet_models import GeleNet
+from model.dev1 import GeleNet
 from data import test_dataset
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--testsize', type=int, default=352, help='testing size')
+parser.add_argument('--testsize', type=int, default=384, help='testing size')
 opt = parser.parse_args()
 
 dataset_path = './data/'
 # you need to change 1 name of dataset line27 ;2 path of trained model line20;3 path of save result line31
 model = GeleNet()
-save_path = './models/04/'
+save_path = './models/2/'
 # model.load_state_dict(torch.load('./GeleNet_EORSSD_PVT.pth'))
-model.load_state_dict(torch.load('./models/04.pth'))
+model.load_state_dict(torch.load('./models/2.pth'))
 # model.load_state_dict(torch.load('./models/GeleNet/GeleNet_vgg.pth.44'))
 
 model.cuda()

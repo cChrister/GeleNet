@@ -1,4 +1,5 @@
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 from model.pvtv2 import pvt_v2_b2
@@ -289,6 +290,32 @@ class VGGNetFeatureExtractor(nn.Module):
         x3 = self.vgg[17:24](x2)  # 512x22x22
         x4 = self.vgg[24:31](x3)  # 512x11x11
         return x1, x2, x3, x4
+    
+    
+def init_weights(m):
+    """
+    Initialize weights of layers using Kaiming Normal (He et al.) as argument of "Apply" function of
+    "nn.Module"
+    :param m: Layer to initialize
+    :return: None
+    """
+    if isinstance(m, nn.Conv2d):
+        '''
+        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(m.weight)
+        trunc_normal_(m.weight, std=math.sqrt(1.0/fan_in)/.87962566103423978)
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
+        '''
+        nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+        if m.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(m.weight)
+            bound = 1 / math.sqrt(fan_in)
+            nn.init.uniform_(m.bias, -bound, bound)
+        
+    elif isinstance(m, nn.BatchNorm2d):
+        nn.init.constant_(m.weight, 1)
+        nn.init.constant_(m.bias, 0)
+
 
 class GeleNet(nn.Module):
     def __init__(self, channel=32):
@@ -330,7 +357,21 @@ class GeleNet(nn.Module):
         self.upsample_4 = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
         self.sigmoid = nn.Sigmoid()
 
+        # kaiming_normal_ initialization
+        self.init_parameters()
 
+    def init_parameters(self):
+        self.ChannelNormalization_v1.apply(init_weights)
+        self.ChannelNormalization_v3.apply(init_weights)
+        self.ChannelNormalization_v4.apply(init_weights)
+        self.ChannelNormalization_t1.apply(init_weights)
+        self.ChannelNormalization_t3.apply(init_weights)
+        self.ChannelNormalization_t4.apply(init_weights)
+        self.KTM1.apply(init_weights)
+        self.KTM2.apply(init_weights)
+        self.KTM3.apply(init_weights)
+        self.PDecoder.apply(init_weights)
+        self.upsample_4.apply(init_weights)
 
     def forward(self, x):
         # x.size [1,3,352,352]
