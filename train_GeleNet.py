@@ -7,7 +7,7 @@ import numpy as np
 import pdb, os, argparse
 from datetime import datetime
 
-from model.dev2 import GeleNet
+from model.dev7 import GeleNet
 from data import get_loader
 from utils import clip_gradient, adjust_lr
 
@@ -29,7 +29,7 @@ parser.add_argument('--decay_epoch', type=int, default=30, help='every n epochs 
 opt = parser.parse_args()
 
 
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # build models
 model = GeleNet(channel=32).to(device)
 def count_parameters(model):
@@ -45,7 +45,7 @@ image_root = './data/EORSSD/train-images/'
 gt_root = './data/EORSSD/train-labels/'
 image_root_test = './data/EORSSD/test-images/'
 gt_root_test = './data/EORSSD/test-labels/'
-model_save_path = './models/105.pth'
+model_save_path = './models/3.pth'
 
 train_loader = get_loader(image_root, gt_root, batchsize=opt.batchsize, trainsize=opt.trainsize)
 total_step = len(train_loader)
